@@ -1,0 +1,97 @@
+* GNU CoreUtils + sed + awk
+
+このページは sotarok が「これは知っておいてよかったなぁ」と思う gnu 系コマンド
+ + sed + awk (gawk) についてまとめたページです．
+もともとこのあたりのコマンドを熱心に使い出したのは大学院で研究活動を進めるなかで，集計処理などのためにいちいち「csv で出力して Excel で開いて」とかは鬱陶しいなあと思ってコマンドラインでなにからなにまでやろうと考えたことがきっかけです．
+なので，研究（とくにLinuxマシン上で計算実験とかをしたものを標準出力 > リダイレクトでファイルに保存，とかやる人）活動の中でこのあたりを知っていると，集計用ソフトを使わなくてもある程度のものを見れてしまうかもしれません．
+
+というわけで，自分のためのまとめ＋同じようなことをやってる人のために適当にまとめておきます．
+
+書いたもの，書く予定のものを含めて以下にリストします．
+
+-[[gnu-utils/cut]]
+-[[gnu-utils/sort]]
+-[[gnu-utils/uniq]]
+-[[gnu-utils/awk]]
+-[[gnu-utils/sed]]
+
+
+** 基本的なこと
+
+このページでは特に触れないので，
+-リダイレクト
+-パイプ
+-標準出力/標準エラー出力
+などの言葉はわかってる程度の方が対象かもしれません．
+
+
+** コマンドでごにょごにょしやすい結果を得るコツ
+
+一応リストしたところで，もうちょっと前提条件みたいなものを書いておきます．
+
+研究活動の中で重要なのは，いち早く結果の一部から傾向を見つけて結果の予測をたて，設定したパラメータなどの問題点などを発見し，軌道修正していくことだと思います．
+なので，集計するための結果を出力するプログラムを書くときのコツは，
+
+-すべての結果を最後にまとめて出力せず，逐次出力する
+--出力のためにすべての結果の何かが必要，という場合意外は，計算し終わった時点で print
+-デバッグ用の出力などは標準エラー出力，結果を標準出力へ
+--計算が今どのくらい終わっているのかとかの状況は画面に表示したいものです．しかし，計算結果をリダイレクト「>」でファイルに保存する場合，そういった出力は邪魔になります．標準エラー出力に出力しておけば，保存先をファイルに，出力はディスプレイに，といった形で分けられます
+-csv よりも tsv
+-- cut コマンドなどの区切りにはタブ文字を使うほうが何かと都合が良いです．クオートも必要ないし．
+-マルチプロセス (not マルチスレッド)
+--最近はコア数が多いので，とくに大量のサンプルを対象に計算したりする場合，サンプルを例えば，1/10 ずつ分けて，プログラム本体では引数に，どの対象を計算するのかを与えられるようにして複数プロセスを同時に走らせる，とかするのが楽．例えば4コアのマシンを使うなら，0-3,4-6,7-9の3つにデータを分けて3プロセスくらい走らせれば大まかに3倍くらいで終わります．
+-連番の展開などができる zsh が楽
+-- data/hoge_{0..9}.dat みたいな指定ができるから
+
+
+** プログラムのサンプル
+
+さて，こんなあたりを踏まえたサンプルコードが以下のようなコードです．Python です．
+>|python|
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+サンプルプログラム
+"""
+import os
+import sys
+import csv
+import math
+from optparse import OptionParser
+
+def main():
+  for idx in [str(i) for i in range(RANGE_START, RANGE_END)]:
+    logutil("calc: " +  ii)
+    fn = 'data/result_set.' + idx + ".dat"
+
+    for line_c, line in enumerate(csv.reader(file(user_filename), delimiter="\t")):
+      # ... なんか計算 line[0] ...
+
+      # result になんか計算結果が入ってる
+      print "\t".join(map(str, result))
+
+def logutil(str):
+  sys.stderr.write(str)
+  sys.stderr.write("\n")
+
+if __name__ == '__main__':
+  Option = OptionParser()
+  Option.add_option("--range-start", dest="range_start", default=0,
+                     help="start range of result dir", metavar="S")
+  Option.add_option("--end", dest="range_end", default=10,
+                     help="end range of reslt dir", metavar="E")
+  (Options, Arguments) = get_options()
+  RANGE_START = int(Options.range_start)
+  RANGE_END   = int(Options.range_end)
+
+  main()
+
+||
+
+まあ，こんなところは慣れかもしれませんし，私も知らないことがたくさんありますので，いろいろコツがあったら共有しませんか．
+
+
+** 参考
+
+参考となりそうなリンクがあったら張ります．
